@@ -1,0 +1,9 @@
+**/.idea
+**/__pycache__/
+**/.DS_Store
+**/.vscode
+**/leaf/
+**.egg-info
+**/massif.out*
+*swp
+build
