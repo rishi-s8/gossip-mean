@@ -6,18 +6,42 @@ import argparse
 class Node:
     def __init__(self, value):
         self.value = value
+        self.active = True  # Track if node is active in the current round
+        self.prev_active = True  # Track if node was active in the previous round
 
-def gossip(nodes, num_iterations, update_func, task, mode, stats_interval):
+def gossip(nodes, num_iterations, update_func, task, mode, stats_interval, dropout_prob, dropout_corr):
     print(f"\nGossiping to compute {task.capitalize()} mean using {mode} method...")
     mean_function = get_mean_function(task)
     for iteration in range(num_iterations):
-        # Shuffle the list of nodes to ensure random order of interaction each iteration
-        random.shuffle(nodes)
+        # Determine active nodes for this round based on dropout probability and previous state
         for node in nodes:
-            neighbor = random.choice(nodes)
-            # Ensure the node does not interact with itself
-            while neighbor == node:
-                neighbor = random.choice(nodes)
+            node.prev_active = node.active
+            if node.prev_active:
+                # If node was active in previous round, use regular dropout probability
+                node.active = random.random() >= dropout_prob
+            else:
+                # If node was inactive in previous round, use correlated dropout probability
+                node.active = random.random() >= (dropout_prob + dropout_corr * (1 - dropout_prob))
+            
+        # Get active nodes for this round
+        active_nodes = [node for node in nodes if node.active]
+        
+        if not active_nodes:  # Skip this round if no active nodes
+            print(f"Warning: No active nodes in iteration {iteration + 1}")
+            continue
+            
+        # Shuffle the list of active nodes to ensure random order of interaction each iteration
+        random.shuffle(active_nodes)
+        for node in active_nodes:
+            if not active_nodes:  # If there are no other active nodes
+                continue
+                
+            # Choose a random active neighbor (not self)
+            potential_neighbors = [n for n in active_nodes if n != node]
+            if not potential_neighbors:
+                continue
+                
+            neighbor = random.choice(potential_neighbors)
 
             if mode == 'push-only':
                 neighbor.value = update_func(node.value, neighbor.value)
@@ -30,8 +54,10 @@ def gossip(nodes, num_iterations, update_func, task, mode, stats_interval):
                 raise ValueError("Unsupported gossip type: Choose from 'push-only', 'pull-only', or 'push-pull'")
 
         if stats_interval > 0 and (iteration + 1) % stats_interval == 0:
+            # Calculate statistics over ALL nodes, including inactive ones
             values = [node.value for node in nodes]
-            print(f"Stats after {iteration + 1} iterations: Mean = {mean_function(values)}, Std Dev = {np.std(values)}")
+            active_count = sum(1 for node in nodes if node.active)
+            print(f"Stats after {iteration + 1} iterations: Mean = {mean_function(values)}, Std Dev = {np.std(values)}, Active Nodes = {active_count}/{len(nodes)}")
 
 def initialize_nodes(num_nodes):
     return [Node(random.uniform(1, 100)) for _ in range(num_nodes)]
@@ -65,6 +91,8 @@ def parse_arguments():
     parser.add_argument('--mode', type=str, default='push-pull', choices=['push-only', 'pull-only', 'push-pull'], help='Gossip method to use')
     parser.add_argument('--stats_interval', type=int, default=10, help='Interval of iterations after which to print statistics')
     parser.add_argument('--seed', type=int, default=None, help='Random seed for reproducibility')
+    parser.add_argument('--dropout_prob', type=float, default=0.0, help='Probability of a node dropping out in a given round (0.0-1.0)')
+    parser.add_argument('--dropout_corr', type=float, default=0.0, help='Correlation factor for dropout probability if a node was inactive in the previous round (0.0-1.0)')
     return parser.parse_args()
 
 
@@ -73,6 +101,12 @@ def main():
     # Set the random seed for reproducibility
     random.seed(args.seed)
     np.random.seed(args.seed)
+
+    # Validate dropout probability and correlation
+    if args.dropout_prob < 0.0 or args.dropout_prob > 1.0:
+        raise ValueError("Dropout probability must be between 0.0 and 1.0")
+    if args.dropout_corr < 0.0 or args.dropout_corr > 1.0:
+        raise ValueError("Dropout correlation must be between 0.0 and 1.0")
 
     nodes = initialize_nodes(args.num_nodes)
     update_func = get_update_func(args.task)
@@ -83,9 +117,9 @@ def main():
     print(f"Mean of initial values: {mean_function(init_values)}")
     print(f"Standard deviation of initial values: {np.std(init_values)}\n")
 
-    gossip(nodes, args.num_iterations, update_func, args.task, args.mode, args.stats_interval)
+    gossip(nodes, args.num_iterations, update_func, args.task, args.mode, args.stats_interval, args.dropout_prob, args.dropout_corr)
 
-    # Final values and statistics
+    # Final values and statistics - calculated over ALL nodes, both active and inactive
     final_values = [node.value for node in nodes]
     print("\nCalculating final statistics...")
     print(f"Mean of final values: {mean_function(final_values)}")
