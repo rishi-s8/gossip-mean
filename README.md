@@ -12,10 +12,11 @@ This repository contains code for simulating different gossip algorithms to comp
   - Supports correlated dropouts where a node's previous state affects its current dropout probability.
 - **Customizable Simulation**: Configure the number of nodes, number of iterations, and the frequency of output statistics.
 - **Reproducibility**: Option to set a random seed for consistent results across runs.
+- **Interactive Web Interface**: A Gradio-based UI for running simulations with real-time visualization.
 
 ## Installation
 
-The script requires Python 3.x and uses standard libraries along with `numpy`. To set up your environment, you can follow these steps:
+The script requires Python 3.x and uses standard libraries along with `numpy`, `matplotlib`, and `gradio`. To set up your environment, you can follow these steps:
 
 1. **Clone the repository**:
    ```bash
@@ -27,10 +28,27 @@ The script requires Python 3.x and uses standard libraries along with `numpy`. T
 
 ## Usage
 
-To run the simulation, use the following command:
+### Command Line Interface
+
+To run the simulation from the command line, use:
     
-    
-    python main.py --num_nodes 10000 --num_iterations 50 --task geometric --mode push-pull --stats_interval 5 --seed 42 --dropout_prob 0.1 --dropout_corr 0.5
+```bash
+python main.py --num_nodes 10000 --num_iterations 50 --task geometric --mode push-pull --stats_interval 5 --seed 42 --dropout_prob 0.1 --dropout_corr 0.5
+```
+
+### Interactive Web Interface
+
+To launch the interactive Gradio web interface:
+
+```bash
+python app.py
+```
+
+This will start a local web server and open a browser window where you can:
+- Adjust all simulation parameters using sliders and dropdown menus
+- Run the simulation with a single click
+- View detailed statistics and convergence plots
+- Try predefined examples
 
 **Command Line Arguments**:
 

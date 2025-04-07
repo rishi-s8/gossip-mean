@@ -9,54 +9,59 @@ class Node:
         self.active = True  # Track if node is active in the current round
         self.prev_active = True  # Track if node was active in the previous round
 
+def perform_gossip_iteration(nodes, update_func, mode, dropout_prob, dropout_corr):
+    """Perform a single iteration of the gossip algorithm."""
+    # Determine active nodes for this round based on dropout probability and previous state
+    for node in nodes:
+        node.prev_active = node.active
+        if node.prev_active:
+            # If node was active in previous round, use regular dropout probability
+            node.active = random.random() >= dropout_prob
+        else:
+            # If node was inactive in previous round, use correlated dropout probability
+            node.active = random.random() >= (dropout_prob + dropout_corr * (1 - dropout_prob))
+        
+    # Get active nodes for this round
+    active_nodes = [node for node in nodes if node.active]
+    
+    if not active_nodes:  # Skip this round if no active nodes
+        return False, 0
+        
+    # Shuffle the list of active nodes to ensure random order of interaction each iteration
+    random.shuffle(active_nodes)
+    for node in active_nodes:
+        # Choose a random active neighbor (not self)
+        potential_neighbors = [n for n in active_nodes if n != node]
+        if not potential_neighbors:
+            continue
+            
+        neighbor = random.choice(potential_neighbors)
+
+        if mode == 'push-only':
+            neighbor.value = update_func(node.value, neighbor.value)
+        elif mode == 'pull-only':
+            node.value = update_func(neighbor.value, node.value)
+        elif mode == 'push-pull':
+            new_value = update_func(node.value, neighbor.value)
+            node.value, neighbor.value = new_value, new_value
+        else:
+            raise ValueError("Unsupported gossip type: Choose from 'push-only', 'pull-only', or 'push-pull'")
+    
+    return True, len(active_nodes)
+
 def gossip(nodes, num_iterations, update_func, task, mode, stats_interval, dropout_prob, dropout_corr):
     print(f"\nGossiping to compute {task.capitalize()} mean using {mode} method...")
     mean_function = get_mean_function(task)
     for iteration in range(num_iterations):
-        # Determine active nodes for this round based on dropout probability and previous state
-        for node in nodes:
-            node.prev_active = node.active
-            if node.prev_active:
-                # If node was active in previous round, use regular dropout probability
-                node.active = random.random() >= dropout_prob
-            else:
-                # If node was inactive in previous round, use correlated dropout probability
-                node.active = random.random() >= (dropout_prob + dropout_corr * (1 - dropout_prob))
-            
-        # Get active nodes for this round
-        active_nodes = [node for node in nodes if node.active]
+        success, active_count = perform_gossip_iteration(nodes, update_func, mode, dropout_prob, dropout_corr)
         
-        if not active_nodes:  # Skip this round if no active nodes
+        if not success:  # Skip this round if no active nodes
             print(f"Warning: No active nodes in iteration {iteration + 1}")
             continue
-            
-        # Shuffle the list of active nodes to ensure random order of interaction each iteration
-        random.shuffle(active_nodes)
-        for node in active_nodes:
-            if not active_nodes:  # If there are no other active nodes
-                continue
-                
-            # Choose a random active neighbor (not self)
-            potential_neighbors = [n for n in active_nodes if n != node]
-            if not potential_neighbors:
-                continue
-                
-            neighbor = random.choice(potential_neighbors)
-
-            if mode == 'push-only':
-                neighbor.value = update_func(node.value, neighbor.value)
-            elif mode == 'pull-only':
-                node.value = update_func(neighbor.value, node.value)
-            elif mode == 'push-pull':
-                new_value = update_func(node.value, neighbor.value)
-                node.value, neighbor.value = new_value, new_value
-            else:
-                raise ValueError("Unsupported gossip type: Choose from 'push-only', 'pull-only', or 'push-pull'")
 
         if stats_interval > 0 and (iteration + 1) % stats_interval == 0:
             # Calculate statistics over ALL nodes, including inactive ones
             values = [node.value for node in nodes]
-            active_count = sum(1 for node in nodes if node.active)
             print(f"Stats after {iteration + 1} iterations: Mean = {mean_function(values)}, Std Dev = {np.std(values)}, Active Nodes = {active_count}/{len(nodes)}")
 
 def initialize_nodes(num_nodes):
