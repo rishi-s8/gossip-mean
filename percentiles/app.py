@@ -1,12 +1,11 @@
 import gradio as gr
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 import random
 from statistics import mean
-import time
 
-# Import from percentiles.py
-from percentiles import (
+# Import from main.py instead of percentiles.py
+from main import (
     Node,
     initialize_nodes,
     perform_count_gossip,
@@ -35,7 +34,6 @@ def run_simulation(
         global_random.seed(seed)
         random.seed(seed)
         np.random.seed(seed)
-        print(f"Random seed set to: {seed}")
 
     # Initialize nodes
     nodes = initialize_nodes(num_nodes)
@@ -46,67 +44,159 @@ def run_simulation(
     ]
     status = "Initializing simulation..."
 
-    # Create plotting components with 6 subplots instead of 5
-    fig = plt.figure(figsize=(14, 30))
-    gs = fig.add_gridspec(6, 1, hspace=0.5)
+    # Create individual Plotly figures instead of matplotlib subplots
+    fig1 = go.Figure()  # Node count estimation
+    fig2 = go.Figure()  # Active nodes in Phase 1
+    fig3 = go.Figure()  # Index approximation error
+    fig4 = go.Figure()  # Active nodes in Phase 2
+    fig5 = go.Figure()  # Longest Increasing Subsequence percentage (full view)
+    fig6 = go.Figure()  # Zoomed-in LIS percentage view
 
-    # First subplot: Node count estimation
-    ax1 = fig.add_subplot(gs[0])
-    ax1.set_xlabel("Iterations")
-    ax1.set_ylabel("Estimated Node Count")
-    ax1.set_title("Node Count Estimation (Phase 1)")
-    ax1.grid(True)
-    ax1.axhline(y=num_nodes, color='r', linestyle='--', alpha=0.7, label="Actual Count")
-    ax1.legend()
+    # First figure: Node count estimation
+    fig1.add_trace(
+        go.Scatter(
+            x=[],
+            y=[],
+            mode="lines+markers",
+            name="Estimated Count",
+            line=dict(color="blue"),
+        )
+    )
+    fig1.add_trace(
+        go.Scatter(
+            x=[],
+            y=[],
+            mode="lines",
+            name="Actual Count",
+            line=dict(color="red", dash="dash"),
+        )
+    )
+    fig1.update_layout(
+        title="Node Count Estimation (Phase 1)",
+        xaxis_title="Iterations",
+        yaxis_title="Estimated Node Count",
+        title_x=0.5,  # Center the title
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        margin=dict(l=50, r=50, t=80, b=60),
+    )
 
-    # Second subplot: Active nodes in Phase 1
-    ax2 = fig.add_subplot(gs[1])
-    ax2.set_xlabel("Iterations")
-    ax2.set_ylabel("Number of Active Nodes")
-    ax2.set_title("Active Nodes (Phase 1)")
-    ax2.grid(True)
+    # Second figure: Active nodes in Phase 1
+    fig2.add_trace(
+        go.Scatter(
+            x=[],
+            y=[],
+            mode="lines+markers",
+            name="Active Nodes",
+            line=dict(color="green"),
+        )
+    )
+    fig2.update_layout(
+        title="Active Nodes (Phase 1)",
+        xaxis_title="Iterations",
+        yaxis_title="Number of Active Nodes",
+        title_x=0.5,  # Center the title
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        margin=dict(l=50, r=50, t=80, b=60),
+    )
 
-    # Third subplot: Index approximation error
-    ax3 = fig.add_subplot(gs[2])
-    ax3.set_xlabel("Iterations")
-    ax3.set_ylabel("Mean Absolute Error")
-    ax3.set_title("Index Approximation Error (Phase 2)")
-    ax3.grid(True)
+    # Third figure: Index approximation error
+    fig3.add_trace(
+        go.Scatter(
+            x=[],
+            y=[],
+            mode="lines+markers",
+            name="Mean Absolute Error",
+            line=dict(color="red"),
+        )
+    )
+    fig3.update_layout(
+        title="Index Approximation Error (Phase 2)",
+        xaxis_title="Iterations",
+        yaxis_title="Mean Absolute Error",
+        title_x=0.5,  # Center the title
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        margin=dict(l=50, r=50, t=80, b=60),
+    )
 
-    # Fourth subplot: Active nodes in Phase 2
-    ax4 = fig.add_subplot(gs[3])
-    ax4.set_xlabel("Iterations")
-    ax4.set_ylabel("Number of Active Nodes")
-    ax4.set_title("Active Nodes (Phase 2)")
-    ax4.grid(True)
+    # Fourth figure: Active nodes in Phase 2
+    fig4.add_trace(
+        go.Scatter(
+            x=[],
+            y=[],
+            mode="lines+markers",
+            name="Active Nodes",
+            line=dict(color="green"),
+        )
+    )
+    fig4.update_layout(
+        title="Active Nodes (Phase 2)",
+        xaxis_title="Iterations",
+        yaxis_title="Number of Active Nodes",
+        title_x=0.5,  # Center the title
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        margin=dict(l=50, r=50, t=80, b=60),
+    )
 
-    # Fifth subplot: Longest Increasing Subsequence percentage (full view)
-    ax5 = fig.add_subplot(gs[4])
-    ax5.set_xlabel("Iterations")
-    ax5.set_ylabel("LIS Percentage")
-    ax5.set_title("Longest Increasing Subsequence (% of nodes in correct order)")
-    ax5.grid(True)
-    ax5.set_ylim(0, 100)
-    
-    # Sixth subplot: Zoomed-in LIS percentage view
-    ax6 = fig.add_subplot(gs[5])
-    ax6.set_xlabel("Iterations")
-    ax6.set_ylabel("LIS Percentage")
-    ax6.set_title("Zoomed View: Last 50% of Iterations")
-    ax6.grid(True)
+    # Fifth figure: Longest Increasing Subsequence percentage
+    fig5.add_trace(
+        go.Scatter(
+            x=[],
+            y=[],
+            mode="lines+markers",
+            name="LIS Percentage",
+            line=dict(color="purple"),
+        )
+    )
+    fig5.update_layout(
+        title="Longest Increasing Subsequence (% of nodes in correct order)",
+        xaxis_title="Iterations",
+        yaxis_title="LIS Percentage (%)",
+        title_x=0.5,  # Center the title
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        margin=dict(l=50, r=50, t=80, b=60),
+    )
+
+    # Sixth figure: Zoomed-in LIS percentage view
+    fig6.add_trace(
+        go.Scatter(
+            x=[],
+            y=[],
+            mode="lines+markers",
+            name="LIS % (Last 50%)",
+            line=dict(color="purple"),
+        )
+    )
+    fig6.update_layout(
+        title="Zoomed View: Last 50% of Iterations",
+        xaxis_title="Iterations",
+        yaxis_title="LIS Percentage (%)",
+        title_x=0.5,  # Center the title
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        margin=dict(l=50, r=50, t=80, b=60),
+    )
+
+    # Add grid to all plots
+    for fig in [fig1, fig2, fig3, fig4, fig5, fig6]:
+        fig.update_xaxes(showgrid=True)
+        fig.update_yaxes(showgrid=True)
+
+    # Create a list of figures
+    figures = [fig1, fig2, fig3, fig4, fig5, fig6]
 
     # Data for tracking over iterations
     phase1_iterations = []
     phase1_estimates = []
     phase1_active = []
-    
+
     phase2_iterations = []
     phase2_errors = []
     phase2_active = []
     phase2_lis = []
 
     # Initial plot
-    yield "\n".join(logs), status, fig
+    yield "\n".join(logs), status, figures[0], figures[1], figures[2], figures[
+        3
+    ], figures[4], figures[5]
 
     # Phase 1: Estimate the number of nodes
     logs.append("\nPhase 1: Estimating the total number of nodes...")
@@ -114,11 +204,15 @@ def run_simulation(
 
     prev_count_values = None
     stable_rounds = 0
+    converged = False  # Add flag to track if convergence has been reached
 
     batch_size = min(5, stats_interval)
     total_batches = int(np.ceil(num_iterations / batch_size))
 
     for batch in range(total_batches):
+        if converged:  # Check if we've already converged and skip remaining batches
+            break
+
         start_iter = batch * batch_size
         end_iter = min((batch + 1) * batch_size, num_iterations)
 
@@ -143,6 +237,7 @@ def run_simulation(
                             f"Phase 1 converged after {iteration + 1} iterations (stable for {convergence_rounds} rounds)."
                         )
                         end_iter = iteration + 1
+                        converged = True  # Set the convergence flag
                         break
                 else:
                     stable_rounds = 0
@@ -153,7 +248,7 @@ def run_simulation(
             if stats_interval > 0 and (iteration + 1) % stats_interval == 0:
                 count_estimates = [1.0 / max(node.count_value, 1e-10) for node in nodes]
                 avg_estimate = mean(count_estimates)
-                
+
                 logs.append(
                     f"Iteration {iteration + 1}: Estimated nodes: {avg_estimate:.2f}, "
                     f"Active: {active_count}/{num_nodes}"
@@ -171,37 +266,34 @@ def run_simulation(
                 count_estimates = [1.0 / max(node.count_value, 1e-10) for node in nodes]
                 avg_estimate = mean(count_estimates)
                 active_count = sum(1 for node in nodes if node.active)
-                
+
                 phase1_iterations.append(end_iter)
                 phase1_estimates.append(avg_estimate)
                 phase1_active.append(active_count)
-            
-            # Update plot data
-            ax1.clear()
-            ax1.plot(phase1_iterations, phase1_estimates, 'b-o', label="Estimated Count")
-            ax1.set_xlabel("Iterations")
-            ax1.set_ylabel("Estimated Node Count")
-            ax1.set_title("Node Count Estimation (Phase 1)")
-            ax1.grid(True)
-            ax1.axhline(y=num_nodes, color='r', linestyle='--', alpha=0.7, label="Actual Count")
-            ax1.legend()
-            
-            # Update active nodes plot separately
-            ax2.clear()
-            ax2.plot(phase1_iterations, phase1_active, 'g-o', label="Active Nodes")
-            ax2.set_xlabel("Iterations")
-            ax2.set_ylabel("Number of Active Nodes")
-            ax2.set_title("Active Nodes (Phase 1)")
-            ax2.grid(True)
-            ax2.legend()
-            
-            # Return updated figure
-            yield "\n".join(logs), status, fig
+
+            # Update plots for Phase 1
+            fig1.data[0].x = phase1_iterations
+            fig1.data[0].y = phase1_estimates
+            fig1.data[1].x = [
+                phase1_iterations[0] if phase1_iterations else 0,
+                phase1_iterations[-1] if phase1_iterations else num_iterations,
+            ]
+            fig1.data[1].y = [num_nodes, num_nodes]
+
+            fig2.data[0].x = phase1_iterations
+            fig2.data[0].y = phase1_active
+
+            # Return updated figures
+            yield "\n".join(logs), status, figures[0], figures[1], figures[2], figures[
+                3
+            ], figures[4], figures[5]
 
     # Calculate the final estimated number of nodes
     final_counts = [1.0 / max(node.count_value, 1e-10) for node in nodes]
     estimated_nodes = mean(final_counts)
-    logs.append(f"\nEstimated number of nodes: {estimated_nodes:.2f} (Actual: {num_nodes})")
+    logs.append(
+        f"\nEstimated number of nodes: {estimated_nodes:.2f} (Actual: {num_nodes})"
+    )
 
     # Phase 2: Approximate indices
     logs.append("\nPhase 2: Approximating node indices...")
@@ -210,8 +302,12 @@ def run_simulation(
     # For convergence tracking
     prev_random_values = None
     stable_rounds = 0
+    converged = False  # Reset convergence flag for Phase 2
 
     for batch in range(total_batches):
+        if converged:  # Check if we've already converged and skip remaining batches
+            break
+
         start_iter = batch * batch_size
         end_iter = min((batch + 1) * batch_size, num_iterations)
 
@@ -236,6 +332,7 @@ def run_simulation(
                             f"Phase 2 converged after {iteration + 1} iterations (stable for {convergence_rounds} rounds)."
                         )
                         end_iter = iteration + 1
+                        converged = True  # Set the convergence flag
                         break
                 else:
                     stable_rounds = 0
@@ -246,25 +343,31 @@ def run_simulation(
             if stats_interval > 0 and (iteration + 1) % stats_interval == 0:
                 # Calculate current approximate indices to show convergence progress
                 temp_nodes = estimate_indices([node for node in nodes])
-                
+
                 # Calculate error metrics
-                errors = [abs(node.index - node.approx_index) for node in temp_nodes if node.approx_index is not None]
-                
+                errors = [
+                    abs(node.index - node.approx_index)
+                    for node in temp_nodes
+                    if node.approx_index is not None
+                ]
+
                 # Get random values in order of true indices for LIS calculation
                 sorted_nodes = sorted(nodes, key=lambda x: x.index)
                 random_vals_in_true_order = [node.random_val for node in sorted_nodes]
-                
+
                 # Calculate LIS length and percentage
-                lis_length = longest_increasing_subsequence_length(random_vals_in_true_order)
+                lis_length = longest_increasing_subsequence_length(
+                    random_vals_in_true_order
+                )
                 lis_percentage = (lis_length / len(nodes)) * 100 if nodes else 0
-                
+
                 if errors:
                     mean_error = mean(errors)
                     logs.append(
                         f"Iteration {iteration + 1}: Active: {active_count}/{num_nodes}, "
-                        f"Mean error: {mean_error:.2f}, LIS: {lis_percentage:.1f}%"
+                        f"Mean error: {mean_error:.2f}, LIS: {lis_length}/{len(nodes)} ({lis_percentage:.1f}%)"
                     )
-                    
+
                     # Store for plotting
                     phase2_iterations.append(iteration + 1)
                     phase2_errors.append(mean_error)
@@ -278,100 +381,93 @@ def run_simulation(
         # Update plot after batch
         if batch % 2 == 0 or batch == total_batches - 1:
             # Add current data point if available and not already added
-            if phase2_errors and (not phase2_iterations or phase2_iterations[-1] < end_iter):
+            if phase2_errors and (
+                not phase2_iterations or phase2_iterations[-1] < end_iter
+            ):
                 temp_nodes = estimate_indices([node for node in nodes])
-                errors = [abs(node.index - node.approx_index) for node in temp_nodes if node.approx_index is not None]
-                
+                errors = [
+                    abs(node.index - node.approx_index)
+                    for node in temp_nodes
+                    if node.approx_index is not None
+                ]
+
                 # Get LIS percentage
                 sorted_nodes = sorted(nodes, key=lambda x: x.index)
                 random_vals_in_true_order = [node.random_val for node in sorted_nodes]
-                lis_length = longest_increasing_subsequence_length(random_vals_in_true_order)
+                lis_length = longest_increasing_subsequence_length(
+                    random_vals_in_true_order
+                )
                 lis_percentage = (lis_length / len(nodes)) * 100 if nodes else 0
-                
+
                 if errors:
                     mean_error = mean(errors)
                     active_count = sum(1 for node in nodes if node.active)
-                    
+
                     phase2_iterations.append(end_iter)
                     phase2_errors.append(mean_error)
                     phase2_active.append(active_count)
                     phase2_lis.append(lis_percentage)
-            
-            # Update error plot
+
+            # Update Phase 2 plots if we have data
             if phase2_errors:
-                ax3.clear()
-                ax3.plot(phase2_iterations, phase2_errors, 'r-o', label="Mean Absolute Error")
-                ax3.set_xlabel("Iterations")
-                ax3.set_ylabel("Mean Absolute Error")
-                ax3.set_title("Index Approximation Error (Phase 2)")
-                ax3.grid(True)
-                ax3.legend()
-                
-                # Update active nodes plot separately
-                ax4.clear()
-                ax4.plot(phase2_iterations, phase2_active, 'g-o', label="Active Nodes")
-                ax4.set_xlabel("Iterations")
-                ax4.set_ylabel("Number of Active Nodes")
-                ax4.set_title("Active Nodes (Phase 2)")
-                ax4.grid(True)
-                ax4.legend()
-                
-                # Update LIS plot (full)
-                ax5.clear()
-                ax5.plot(phase2_iterations, phase2_lis, '-o', color='purple', label="LIS Percentage")
-                ax5.set_xlabel("Iterations")
-                ax5.set_ylabel("LIS Percentage (%)")
-                ax5.set_title("Longest Increasing Subsequence (% of nodes in correct order)")
-                ax5.grid(True)
-                ax5.set_ylim(0, 100)
-                ax5.legend()
-                
-                # Add zoomed-in version for last half of iterations
+                # Update error plot
+                fig3.data[0].x = phase2_iterations
+                fig3.data[0].y = phase2_errors
+
+                # Update active nodes in phase 2
+                fig4.data[0].x = phase2_iterations
+                fig4.data[0].y = phase2_active
+
+                # Update LIS plot (full view)
+                fig5.data[0].x = phase2_iterations
+                fig5.data[0].y = phase2_lis
+
+                # Update zoomed LIS plot (last 50%)
                 if len(phase2_iterations) > 1:
-                    # Clear the zoomed plot (which now has its own dedicated axes)
-                    ax6.clear()
-                    
-                    # Only show the last half of data
                     half_idx = max(1, len(phase2_iterations) // 2)
                     zoomed_iterations = phase2_iterations[half_idx:]
                     zoomed_lis = phase2_lis[half_idx:]
-                    
+
                     if zoomed_iterations:
                         # Calculate best y-axis limits to focus on the data
                         min_lis = min(zoomed_lis) * 0.98 if zoomed_lis else 0
-                        max_lis = max(min(100, max(zoomed_lis) * 1.02), min_lis + 5) if zoomed_lis else 100
-                        
-                        ax6.plot(zoomed_iterations, zoomed_lis, '-o', color='purple', label="LIS % (Last 50%)")
-                        ax6.set_xlabel("Iterations")
-                        ax6.set_ylabel("LIS Percentage (%)")
-                        ax6.set_title("Zoomed View: Last 50% of Iterations")
-                        ax6.grid(True)
-                        ax6.set_ylim(min_lis, max_lis)
-                        ax6.legend()
-        
-            # Return updated figure
-            yield "\n".join(logs), status, fig
+                        max_lis = (
+                            max(min(100, max(zoomed_lis) * 1.02), min_lis + 5)
+                            if zoomed_lis
+                            else 100
+                        )
+
+                        fig6.data[0].x = zoomed_iterations
+                        fig6.data[0].y = zoomed_lis
+                        fig6.update_yaxes(range=[min_lis, max_lis])
+
+            # Return updated figures
+            yield "\n".join(logs), status, figures[0], figures[1], figures[2], figures[
+                3
+            ], figures[4], figures[5]
 
     # Estimate final indices
     nodes = estimate_indices(nodes)
-    
+
     # Calculate final error metrics
     errors = [abs(node.index - node.approx_index) for node in nodes]
     mean_absolute_error = mean(errors)
     max_error = max(errors)
-    
+
     # Calculate final LIS
     sorted_nodes = sorted(nodes, key=lambda x: x.index)
     random_vals_in_true_order = [node.random_val for node in sorted_nodes]
     lis_length = longest_increasing_subsequence_length(random_vals_in_true_order)
     lis_percentage = (lis_length / len(nodes)) * 100
-    
+
     # Show final results
     logs.append("\nFinal results:")
     logs.append(f"Mean absolute error: {mean_absolute_error:.2f}")
     logs.append(f"Max error: {max_error:.2f}")
-    logs.append(f"Nodes in correct relative order: {lis_length}/{num_nodes} ({lis_percentage:.1f}%)")
-    
+    logs.append(
+        f"Nodes in correct relative order: {lis_length}/{num_nodes} ({lis_percentage:.1f}%)"
+    )
+
     # Print results for a sample of nodes
     logs.append("\nResults for a sample of nodes:")
     logs.append("Actual Index | Approximate Index | X Value | Random Value")
@@ -383,13 +479,29 @@ def run_simulation(
         logs.append(
             f"{node.index:12d} | {node.approx_index:16.2f} | {node.x:7.2f} | {node.random_val:.6f}"
         )
-    
+
     status = "Simulation complete"
-    yield "\n".join(logs), status, fig
+    yield "\n".join(logs), status, figures[0], figures[1], figures[2], figures[
+        3
+    ], figures[4], figures[5]
 
 
 # Create the Gradio interface
-with gr.Blocks(title="Gossip-based Percentile Estimation") as demo:
+with gr.Blocks(
+    title="Gossip-based Percentile Estimation",
+    css="""
+    .plot-container { 
+        width: 100% !important; 
+        min-height: 350px !important; 
+        display: block !important;
+        margin-bottom: 20px !important;
+    }
+    /* Fix for the container height */
+    .gradio-container {
+        max-width: 100% !important;
+    }
+""",
+) as demo:
     gr.Markdown("# Gossip-based Percentile Estimation")
     gr.Markdown(
         """
@@ -400,14 +512,19 @@ with gr.Blocks(title="Gossip-based Percentile Estimation") as demo:
     """
     )
 
+    # Input controls section
     with gr.Row():
-        with gr.Column():
-            # Input components
+        # Left column for parameters
+        with gr.Column(scale=2):
             num_nodes = gr.Slider(
-                minimum=10, maximum=1000, value=100, step=10, label="Number of Nodes"
+                minimum=10, maximum=10000, value=100, step=10, label="Number of Nodes"
             )
             num_iterations = gr.Slider(
-                minimum=10, maximum=100, value=50, step=5, label="Number of Iterations per Phase"
+                minimum=10,
+                maximum=5000,
+                value=50,
+                step=5,
+                label="Number of Iterations per Phase",
             )
             mode = gr.Radio(
                 ["push-only", "pull-only", "push-pull"],
@@ -415,8 +532,11 @@ with gr.Blocks(title="Gossip-based Percentile Estimation") as demo:
                 label="Gossip Method",
             )
             stats_interval = gr.Slider(
-                minimum=1, maximum=20, value=5, step=1, label="Statistics Interval"
+                minimum=1, maximum=100, value=5, step=1, label="Statistics Interval"
             )
+
+        # Right column for more parameters
+        with gr.Column(scale=2):
             seed = gr.Number(value=None, label="Random Seed (optional)", precision=0)
             dropout_prob = gr.Slider(
                 minimum=0.0,
@@ -434,24 +554,51 @@ with gr.Blocks(title="Gossip-based Percentile Estimation") as demo:
             )
             convergence_rounds = gr.Slider(
                 minimum=0,
-                maximum=20,
+                maximum=1000,
                 value=0,
                 step=1,
                 label="Convergence Rounds (0 to disable)",
             )
 
-            run_button = gr.Button("Run Simulation")
+    # Run button in its own row
+    with gr.Row():
+        run_button = gr.Button("Run Simulation", size="large")
 
+    # Status display
+    with gr.Row():
+        status_text = gr.Textbox(label="Current Status", lines=1, max_lines=1)
+
+    # Full-width visualization section
+    with gr.Row():
+        with gr.Column(scale=1, min_width=800):
+            gr.Markdown("### Visualization")
+            # Create separate plot components for each figure
+            output_plot1 = gr.Plot(
+                label="Node Count Estimation (Phase 1)", elem_classes="plot-container"
+            )
+            output_plot2 = gr.Plot(
+                label="Active Nodes (Phase 1)", elem_classes="plot-container"
+            )
+            output_plot3 = gr.Plot(
+                label="Index Approximation Error (Phase 2)",
+                elem_classes="plot-container",
+            )
+            output_plot4 = gr.Plot(
+                label="Active Nodes (Phase 2)", elem_classes="plot-container"
+            )
+            output_plot5 = gr.Plot(
+                label="Longest Increasing Subsequence", elem_classes="plot-container"
+            )
+            output_plot6 = gr.Plot(
+                label="Zoomed View: Last 50% of Iterations",
+                elem_classes="plot-container",
+            )
+
+    # Results log at the bottom
+    with gr.Row():
         with gr.Column():
-            # Output components
-            with gr.Column(variant="panel"):
-                gr.Markdown("### Simulation Progress")
-                output_text = gr.Textbox(label="Results Log", lines=10)
-
-            with gr.Column(variant="panel"):
-                gr.Markdown("### Visualization")
-                status_text = gr.Textbox(label="Current Status", lines=1, max_lines=1)
-                output_plot = gr.Plot(label="Convergence Plots")
+            gr.Markdown("### Simulation Progress")
+            output_text = gr.Textbox(label="Results Log", lines=8)
 
     # Connect the run button to the simulation function
     run_button.click(
@@ -466,7 +613,16 @@ with gr.Blocks(title="Gossip-based Percentile Estimation") as demo:
             dropout_corr,
             convergence_rounds,
         ],
-        outputs=[output_text, status_text, output_plot],
+        outputs=[
+            output_text,
+            status_text,
+            output_plot1,
+            output_plot2,
+            output_plot3,
+            output_plot4,
+            output_plot5,
+            output_plot6,
+        ],
     )
 
     # Add examples for quick testing
@@ -493,5 +649,6 @@ if __name__ == "__main__":
     random.seed(42)
     global_random.seed(42)
     np.random.seed(42)
-    
+
+    # Launch the demo without CSS parameter
     demo.launch()

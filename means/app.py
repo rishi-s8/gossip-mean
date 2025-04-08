@@ -1,9 +1,7 @@
 import gradio as gr
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 import random
-import time
-from statistics import geometric_mean, harmonic_mean, mean
 
 # Import from main.py
 from main import (
@@ -47,7 +45,6 @@ def run_simulation(
         global_random.seed(seed)
         random.seed(seed)  # Also set Python's built-in random
         np.random.seed(seed)
-        print(f"Random seed set to: {seed}")
 
     # Initialize nodes and functions
     nodes = initialize_nodes(num_nodes)
@@ -76,191 +73,153 @@ def run_simulation(
 
     status = "Initializing simulation..."
 
-    # Create the plotting components with 5 subplots instead of 3
-    fig = plt.figure(figsize=(14, 20))
+    # Create separate figures for each visualization instead of subplots
+    fig1 = go.Figure()  # Full convergence plot
+    fig2 = go.Figure()  # Zoomed convergence plot
+    fig3 = go.Figure()  # Standard deviation (linear)
+    fig4 = go.Figure()  # Standard deviation (log)
+    fig5 = go.Figure()  # Active nodes
 
-    # Define grid for subplots with more space between them
-    gs = fig.add_gridspec(5, 1, hspace=0.5)
-
-    # First subplot: Full convergence plot (normal scale)
-    ax1 = fig.add_subplot(gs[0])
-    (line_mean_full,) = ax1.plot(
-        iterations, all_means, "b-o", label=f"{task.capitalize()} Mean"
+    # First figure: Full convergence plot
+    fig1.add_trace(
+        go.Scatter(
+            x=iterations,
+            y=all_means,
+            mode="lines+markers",
+            name=f"{task.capitalize()} Mean",
+            line=dict(color="blue"),
+        )
     )
-    # Add horizontal dashed line for initial mean
-    ax1.axhline(y=init_mean, color="r", linestyle="--", alpha=0.7, label="Initial Mean")
-
-    # Second subplot: Zoomed convergence plot (last 50%)
-    ax2 = fig.add_subplot(gs[1])
-    (line_mean_zoomed,) = ax2.plot(
-        iterations, all_means, "g-o", label=f"{task.capitalize()} Mean (Last 50%)"
+    fig1.add_trace(
+        go.Scatter(
+            x=[iterations[0], iterations[0]],
+            y=[init_mean, init_mean],
+            mode="lines",
+            name="Initial Mean",
+            line=dict(color="red", dash="dash"),
+        )
     )
-    # Add horizontal dashed line for initial mean
-    ax2.axhline(y=init_mean, color="r", linestyle="--", alpha=0.7, label="Initial Mean")
-
-    # Third subplot: Standard deviation (normal scale)
-    ax3 = fig.add_subplot(gs[2])
-    (line_std_normal,) = ax3.plot(
-        iterations, all_stds, "r-o", label="Standard Deviation"
-    )
-
-    # Fourth subplot: Standard deviation (log scale)
-    ax4 = fig.add_subplot(gs[3])
-    (line_std_log,) = ax4.plot(
-        iterations, all_stds, "m-o", label="Standard Deviation (Log Scale)"
-    )
-    ax4.set_yscale("log")
-
-    # Fifth subplot: Active nodes count
-    ax5 = fig.add_subplot(gs[4])
-    (line_active,) = ax5.plot(
-        iterations, active_nodes_counts, "g-o", label="Active Nodes"
+    fig1.update_layout(
+        title=f"Full Convergence of {task.capitalize()} Mean",
+        xaxis_title="Iterations",
+        yaxis_title=f"{task.capitalize()} Mean",
+        title_x=0.5,  # Center the title
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        margin=dict(l=50, r=50, t=80, b=60),
     )
 
-    # Configure the plots
-    ax1.set_xlabel("Iterations")
-    ax1.set_ylabel("Mean Value")
-    ax1.set_title(f"Full Convergence of {task.capitalize()} Mean")
-    ax1.grid(True)
-    ax1.legend()
+    # Second figure: Zoomed convergence plot
+    fig2.add_trace(
+        go.Scatter(
+            x=iterations,
+            y=all_means,
+            mode="lines+markers",
+            name=f"{task.capitalize()} Mean",
+            line=dict(color="green"),
+        )
+    )
+    fig2.add_trace(
+        go.Scatter(
+            x=[iterations[0], iterations[0]],
+            y=[init_mean, init_mean],
+            mode="lines",
+            name="Initial Mean",
+            line=dict(color="red", dash="dash"),
+        )
+    )
+    fig2.update_layout(
+        title=f"Zoomed Convergence (Last 50%)",
+        xaxis_title="Iterations",
+        yaxis_title=f"{task.capitalize()} Mean",
+        title_x=0.5,  # Center the title
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        margin=dict(l=50, r=50, t=80, b=60),
+    )
 
-    ax2.set_xlabel("Iterations")
-    ax2.set_ylabel("Mean Value")
-    ax2.set_title(f"Zoomed Convergence (Last 50%)")
-    ax2.grid(True)
-    ax2.legend()
+    # Third figure: Standard deviation (normal scale)
+    fig3.add_trace(
+        go.Scatter(
+            x=iterations,
+            y=all_stds,
+            mode="lines+markers",
+            name="Standard Deviation",
+            line=dict(color="red"),
+        )
+    )
+    fig3.update_layout(
+        title="Standard Deviation (Linear Scale)",
+        xaxis_title="Iterations",
+        yaxis_title="Standard Deviation",
+        title_x=0.5,  # Center the title
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        margin=dict(l=50, r=50, t=80, b=60),
+    )
 
-    ax3.set_xlabel("Iterations")
-    ax3.set_ylabel("Standard Deviation")
-    ax3.set_title("Standard Deviation (Linear Scale)")
-    ax3.grid(True)
-    ax3.legend()
+    # Fourth figure: Standard deviation (log scale)
+    fig4.add_trace(
+        go.Scatter(
+            x=iterations,
+            y=all_stds,
+            mode="lines+markers",
+            name="Standard Deviation",
+            line=dict(color="magenta"),
+        )
+    )
+    fig4.update_layout(
+        title="Standard Deviation (Log Scale)",
+        xaxis_title="Iterations",
+        yaxis_title="Standard Deviation (log)",
+        title_x=0.5,  # Center the title
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        margin=dict(l=50, r=50, t=80, b=60),
+    )
+    fig4.update_yaxes(type="log", tickformat=".1e", exponentformat="power")
 
-    ax4.set_xlabel("Iterations")
-    ax4.set_ylabel("Standard Deviation")
-    ax4.set_title("Standard Deviation (Log Scale)")
-    ax4.grid(True)
-    ax4.legend()
+    # Fifth figure: Active nodes count
+    fig5.add_trace(
+        go.Scatter(
+            x=iterations,
+            y=active_nodes_counts,
+            mode="lines+markers",
+            name="Active Nodes",
+            line=dict(color="green"),
+        )
+    )
+    fig5.update_layout(
+        title="Active Nodes Over Iterations",
+        xaxis_title="Iterations",
+        yaxis_title="Number of Nodes",
+        title_x=0.5,  # Center the title
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        margin=dict(l=50, r=50, t=80, b=60),
+    )
 
-    ax5.set_xlabel("Iterations")
-    ax5.set_ylabel("Number of Active Nodes")
-    ax5.set_title("Active Nodes Over Iterations")
-    ax5.grid(True)
-    ax5.legend()
+    # Add grid to all plots
+    for fig in [fig1, fig2, fig3, fig4, fig5]:
+        fig.update_xaxes(showgrid=True)
+        fig.update_yaxes(showgrid=True)
 
-    # Replace tight_layout() with manual adjustment
-    fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.05, hspace=0.5)
+    # Create a list of figures
+    figures = [fig1, fig2, fig3, fig4, fig5]
 
     # Initial plot
-    yield "\n".join(logs), status, fig
-
-    # Function to update the plot without recreating it
-    def update_plot():
-        # Update line data for all plots
-        line_mean_full.set_xdata(iterations)
-        line_mean_full.set_ydata(all_means)
-
-        line_mean_zoomed.set_xdata(iterations)
-        line_mean_zoomed.set_ydata(all_means)
-
-        line_std_normal.set_xdata(iterations)
-        line_std_normal.set_ydata(all_stds)
-
-        line_std_log.set_xdata(iterations)
-        line_std_log.set_ydata(all_stds)
-
-        line_active.set_xdata(iterations)
-        line_active.set_ydata(active_nodes_counts)
-
-        # Clear previous box plots before adding new ones
-        for artist in ax1.artists:
-            artist.remove()
-        for poly in ax1.collections:
-            if type(poly).__name__ == "PolyCollection":  # Box plot elements
-                poly.remove()
-
-        for artist in ax2.artists:
-            artist.remove()
-        for poly in ax2.collections:
-            if type(poly).__name__ == "PolyCollection":
-                poly.remove()
-
-        # Add box plots to full convergence plot
-        if len(all_values_at_intervals) > 1:  # Skip if we only have initial values
-            # Set positions for box plots (align with iterations)
-            positions = iterations
-            # Create box plots for full convergence
-            box_plot_full = ax1.boxplot(
-                all_values_at_intervals,
-                positions=positions,
-                widths=max(1, num_iterations / 50),
-                patch_artist=True,
-                showfliers=False,
-            )
-
-            # Style the box plots
-            for box in box_plot_full["boxes"]:
-                box.set(color="blue", alpha=0.3)
-
-            # For zoomed plot, only show the last 50% of data points
-            half_point = max(1, len(all_values_at_intervals) // 2)
-            if len(all_values_at_intervals) > half_point:
-                zoomed_values = all_values_at_intervals[half_point:]
-                zoomed_positions = iterations[half_point:]
-
-                # Create box plots for zoomed convergence
-                box_plot_zoomed = ax2.boxplot(
-                    zoomed_values,
-                    positions=zoomed_positions,
-                    widths=max(1, num_iterations / 50),
-                    patch_artist=True,
-                    showfliers=False,
-                )
-
-                # Style the box plots
-                for box in box_plot_zoomed["boxes"]:
-                    box.set(color="green", alpha=0.3)
-
-                # Set x-axis limits for zoomed plot to show only last 50%
-                if len(zoomed_positions) > 0:
-                    ax2.set_xlim(
-                        left=zoomed_positions[0] - (num_iterations * 0.05),
-                        right=iterations[-1] + (num_iterations * 0.05),
-                    )
-
-        # Adjust axes limits
-        ax1.relim()
-        ax1.autoscale_view()
-
-        # For zoomed plot, ensure the initial mean is always visible while focusing on convergence details
-        if len(all_means) > 2:
-            half_index = max(1, len(all_means) // 2)
-            zoomed_means = all_means[half_index:]
-            if zoomed_means:
-                # Include both the zoomed means and the initial mean in the y-axis range
-                min_val = min(min(zoomed_means), init_mean) * 0.98
-                max_val = max(max(zoomed_means), init_mean) * 1.02
-                ax2.set_ylim(bottom=min_val, top=max_val)
-
-        ax3.relim()
-        ax3.autoscale_view()
-        ax4.relim()
-        ax4.autoscale_view()
-        ax5.relim()
-        ax5.autoscale_view()
-
-        # Replace tight_layout() with manual adjustment
-        fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.05, hspace=0.5)
+    yield "\n".join(logs), status, figures[0], figures[1], figures[2], figures[
+        3
+    ], figures[4]
 
     # For convergence tracking
     prev_values = None
     stable_rounds = 0
+    converged = False  # Add flag to track if convergence has been reached
 
     # Run gossip algorithm in smaller batches for smoother updates
     batch_size = min(5, stats_interval)  # Process a small batch at a time
     total_batches = int(np.ceil(num_iterations / batch_size))
 
     for batch in range(total_batches):
+        if converged:  # Check if we've already converged and skip remaining batches
+            break
+
         start_iter = batch * batch_size
         end_iter = min((batch + 1) * batch_size, num_iterations)
 
@@ -290,6 +249,7 @@ def run_simulation(
                         # Skip to final statistics
                         status = "Converged - simulation complete"
                         end_iter = iteration + 1
+                        converged = True  # Set the convergence flag
                         break
                 else:
                     stable_rounds = 0
@@ -328,9 +288,135 @@ def run_simulation(
                 iterations.append(end_iter)
                 all_values_at_intervals.append(values)
 
-            # Update the plot
-            update_plot()
-            yield "\n".join(logs), status, fig
+            # Update each figure separately with the new data
+            # Update fig1 (full convergence)
+            fig1.data[0].x = iterations
+            fig1.data[0].y = all_means
+            fig1.data[1].x = [iterations[0], iterations[-1]]
+            fig1.data[1].y = [init_mean, init_mean]
+
+            # Update fig2 (zoomed convergence)
+            fig2.data[0].x = iterations
+            fig2.data[0].y = all_means
+            fig2.data[1].x = [iterations[0], iterations[-1]]
+            fig2.data[1].y = [init_mean, init_mean]
+
+            # Update fig3 (std dev linear)
+            fig3.data[0].x = iterations
+            fig3.data[0].y = all_stds
+
+            # Update fig4 (std dev log)
+            fig4.data[0].x = iterations
+            fig4.data[0].y = all_stds
+
+            # Update fig5 (active nodes)
+            fig5.data[0].x = iterations
+            fig5.data[0].y = active_nodes_counts
+
+            # Add box plots for data distribution
+            if len(all_values_at_intervals) > 1:
+                # Clear existing box plots from fig1
+                fig1.data = [trace for trace in fig1.data if trace.type != "box"]
+                # Make sure we keep our original traces
+                if len(fig1.data) < 2:
+                    fig1.add_trace(
+                        go.Scatter(
+                            x=iterations,
+                            y=all_means,
+                            mode="lines+markers",
+                            name=f"{task.capitalize()} Mean",
+                            line=dict(color="blue"),
+                        )
+                    )
+                    fig1.add_trace(
+                        go.Scatter(
+                            x=[iterations[0], iterations[-1]],
+                            y=[init_mean, init_mean],
+                            mode="lines",
+                            name="Initial Mean",
+                            line=dict(color="red", dash="dash"),
+                        )
+                    )
+
+                # Add box plots to fig1 (full convergence)
+                for i, values in enumerate(all_values_at_intervals):
+                    fig1.add_trace(
+                        go.Box(
+                            y=values,
+                            x=[iterations[i]] * len(values),
+                            name=f"Iteration {iterations[i]}",
+                            boxpoints=False,
+                            marker_color="rgba(0, 0, 255, 0.3)",
+                            showlegend=False,
+                            line_width=1,
+                            width=max(1, num_iterations / 50),
+                        )
+                    )
+
+                # Clear existing box plots from fig2
+                fig2.data = [trace for trace in fig2.data if trace.type != "box"]
+                # Make sure we keep our original traces
+                if len(fig2.data) < 2:
+                    fig2.add_trace(
+                        go.Scatter(
+                            x=iterations,
+                            y=all_means,
+                            mode="lines+markers",
+                            name=f"{task.capitalize()} Mean",
+                            line=dict(color="green"),
+                        )
+                    )
+                    fig2.add_trace(
+                        go.Scatter(
+                            x=[iterations[0], iterations[-1]],
+                            y=[init_mean, init_mean],
+                            mode="lines",
+                            name="Initial Mean",
+                            line=dict(color="red", dash="dash"),
+                        )
+                    )
+
+                # Only show the last 50% of data points for zoomed plot
+                half_point = max(1, len(all_values_at_intervals) // 2)
+                if len(all_values_at_intervals) > half_point:
+                    zoomed_values = all_values_at_intervals[half_point:]
+                    zoomed_iterations = iterations[half_point:]
+
+                    for i, values in enumerate(zoomed_values):
+                        fig2.add_trace(
+                            go.Box(
+                                y=values,
+                                x=[zoomed_iterations[i]] * len(values),
+                                name=f"Iteration {zoomed_iterations[i]}",
+                                boxpoints=False,
+                                marker_color="rgba(0, 255, 0, 0.3)",
+                                showlegend=False,
+                                line_width=1,
+                                width=max(1, num_iterations / 50),
+                            )
+                        )
+
+            # Set axis ranges for better visualization
+            # For full convergence plot (fig1)
+            y_min = min(min(all_means), init_mean) * 0.95
+            y_max = max(max(all_means), init_mean) * 1.05
+            fig1.update_yaxes(range=[y_min, y_max])
+
+            # For zoomed plot (fig2)
+            if len(all_means) > 2:
+                half_index = max(1, len(all_means) // 2)
+                zoomed_means = all_means[half_index:]
+                if zoomed_means:
+                    min_val = min(min(zoomed_means), init_mean) * 0.98
+                    max_val = max(max(zoomed_means), init_mean) * 1.02
+                    fig2.update_yaxes(range=[min_val, max_val])
+
+                    half_point_x = iterations[half_index]
+                    fig2.update_xaxes(range=[half_point_x, iterations[-1]])
+
+            yield "\n".join(logs), status, figures[0], figures[1], figures[2], figures[
+                3
+            ], figures[4]
 
     # Final update with complete stats
     final_values = [node.value for node in nodes]
@@ -350,14 +436,45 @@ def run_simulation(
         active_nodes_counts.append(active_count)
         iterations.append(num_iterations)
         all_values_at_intervals.append(final_values)
-        update_plot()
+
+        # Update plot with final data
+        fig1.data[0].x = iterations
+        fig1.data[0].y = all_means
+        fig1.data[1].x = [iterations[0], iterations[-1]]
+        fig1.data[1].y = [init_mean, init_mean]
+        fig2.data[0].x = iterations
+        fig2.data[0].y = all_means
+        fig2.data[1].x = [iterations[0], iterations[-1]]
+        fig2.data[1].y = [init_mean, init_mean]
+        fig3.data[0].x = iterations
+        fig3.data[0].y = all_stds
+        fig4.data[0].x = iterations
+        fig4.data[0].y = all_stds
+        fig5.data[0].x = iterations
+        fig5.data[0].y = active_nodes_counts
 
     status = "Simulation complete"
-    yield "\n".join(logs), status, fig
+    yield "\n".join(logs), status, figures[0], figures[1], figures[2], figures[
+        3
+    ], figures[4]
 
 
 # Create the Gradio interface
-with gr.Blocks(title="Gossip Algorithm Simulator") as demo:
+with gr.Blocks(
+    title="Gossip Algorithm Simulator",
+    css="""
+    .plot-container { 
+        width: 100% !important; 
+        min-height: 350px !important; 
+        display: block !important;
+        margin-bottom: 20px !important;
+    }
+    /* Fix for the container height */
+    .gradio-container {
+        max-width: 100% !important;
+    }
+""",
+) as demo:
     gr.Markdown("# Gossip Algorithm Simulator")
     gr.Markdown(
         """
@@ -366,14 +483,16 @@ with gr.Blocks(title="Gossip Algorithm Simulator") as demo:
     """
     )
 
+    # Input controls section
     with gr.Row():
-        with gr.Column():
+        # Left column for parameters
+        with gr.Column(scale=2):
             # Input components
             num_nodes = gr.Slider(
                 minimum=10, maximum=10000, value=1000, step=10, label="Number of Nodes"
             )
             num_iterations = gr.Slider(
-                minimum=10, maximum=200, value=50, step=5, label="Number of Iterations"
+                minimum=10, maximum=5000, value=50, step=5, label="Number of Iterations"
             )
             task = gr.Radio(
                 ["geometric", "harmonic", "arithmetic"],
@@ -385,8 +504,11 @@ with gr.Blocks(title="Gossip Algorithm Simulator") as demo:
                 value="push-pull",
                 label="Gossip Method",
             )
+
+        # Right column for more parameters
+        with gr.Column(scale=2):
             stats_interval = gr.Slider(
-                minimum=1, maximum=20, value=5, step=1, label="Statistics Interval"
+                minimum=1, maximum=100, value=5, step=1, label="Statistics Interval"
             )
             seed = gr.Number(value=None, label="Random Seed (optional)", precision=0)
             dropout_prob = gr.Slider(
@@ -405,27 +527,46 @@ with gr.Blocks(title="Gossip Algorithm Simulator") as demo:
             )
             convergence_rounds = gr.Slider(
                 minimum=0,
-                maximum=20,
+                maximum=1000,
                 value=0,
                 step=1,
                 label="Convergence Rounds (0 to disable)",
             )
 
-            run_button = gr.Button("Run Simulation")
+    # Run button in its own row
+    with gr.Row():
+        run_button = gr.Button("Run Simulation", size="large")
 
+    # Status display
+    with gr.Row():
+        status_text = gr.Textbox(label="Current Status", lines=1, max_lines=1)
+
+    # Full-width visualization section
+    with gr.Row():
+        with gr.Column(scale=1, min_width=800):
+            gr.Markdown("### Visualization")
+            # Create separate plot components for each figure
+            output_plot1 = gr.Plot(
+                label="Full Convergence", elem_classes="plot-container"
+            )
+            output_plot2 = gr.Plot(
+                label="Zoomed Convergence", elem_classes="plot-container"
+            )
+            output_plot3 = gr.Plot(
+                label="Standard Deviation (Linear)", elem_classes="plot-container"
+            )
+            output_plot4 = gr.Plot(
+                label="Standard Deviation (Log)", elem_classes="plot-container"
+            )
+            output_plot5 = gr.Plot(label="Active Nodes", elem_classes="plot-container")
+
+    # Results log at the bottom
+    with gr.Row():
         with gr.Column():
-            # Output components
-            with gr.Column(variant="panel"):
-                gr.Markdown("### Simulation Progress")
-                output_text = gr.Textbox(label="Results Log", lines=10)
+            gr.Markdown("### Simulation Progress")
+            output_text = gr.Textbox(label="Results Log", lines=8)
 
-            with gr.Column(variant="panel"):
-                gr.Markdown("### Visualization")
-                # Make the status text more prominent
-                status_text = gr.Textbox(label="Current Status", lines=1, max_lines=1)
-                output_plot = gr.Plot(label="Convergence Plots")
-
-    # Connect the run button to the simulation function but don't pass a progress object
+    # Connect the run button to the simulation function
     run_button.click(
         fn=run_simulation,
         inputs=[
@@ -439,7 +580,15 @@ with gr.Blocks(title="Gossip Algorithm Simulator") as demo:
             dropout_corr,
             convergence_rounds,
         ],
-        outputs=[output_text, status_text, output_plot],
+        outputs=[
+            output_text,
+            status_text,
+            output_plot1,
+            output_plot2,
+            output_plot3,
+            output_plot4,
+            output_plot5,
+        ],
     )
 
     # Add examples for quick testing
@@ -468,4 +617,5 @@ if __name__ == "__main__":
     global_random.seed(42)
     np.random.seed(42)
 
+    # Launch the demo without CSS parameter
     demo.launch()
