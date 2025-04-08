@@ -184,13 +184,14 @@ def run_simulation(
         ax1.relim()
         ax1.autoscale_view()
         
-        # For zoomed plot, keep the y-axis limits to focus on convergence details
+        # For zoomed plot, ensure the initial mean is always visible while focusing on convergence details
         if len(all_means) > 2:
             half_index = max(1, len(all_means) // 2)
             zoomed_means = all_means[half_index:]
             if zoomed_means:
-                min_val = min(zoomed_means) * 0.98
-                max_val = max(zoomed_means) * 1.02
+                # Include both the zoomed means and the initial mean in the y-axis range
+                min_val = min(min(zoomed_means), init_mean) * 0.98
+                max_val = max(max(zoomed_means), init_mean) * 1.02
                 ax2.set_ylim(bottom=min_val, top=max_val)
         
         ax3.relim()
