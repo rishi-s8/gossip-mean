@@ -37,8 +37,8 @@ The project requires Python 3.x and uses standard libraries along with `numpy`, 
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/rishi-s8/gossip-mean.git
-   cd gossip-mean
+   git clone https://github.com/rishi-s8/gossip-sim.git
+   cd gossip-sim
    ```
 
 2. **Install dependencies**:
