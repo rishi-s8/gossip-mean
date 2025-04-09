@@ -6,7 +6,6 @@ from statistics import mean
 
 # Import from main.py instead of percentiles.py
 from main import (
-    Node,
     initialize_nodes,
     perform_count_gossip,
     perform_index_gossip,

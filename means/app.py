@@ -5,7 +5,6 @@ import random
 
 # Import from main.py
 from main import (
-    Node,
     initialize_nodes,
     get_update_func,
     get_mean_function,
