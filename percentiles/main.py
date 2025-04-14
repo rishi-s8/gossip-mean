@@ -103,15 +103,9 @@ def perform_index_gossip(nodes, mode, dropout_prob, dropout_corr):
             node.random_val > neighbor.random_val and node.x < neighbor.x
         ):
             if mode == "push-only":
-                neighbor.random_val, node.random_val = (
-                    node.random_val,
-                    neighbor.random_val,
-                )
+                neighbor.random_val = node.random_val
             elif mode == "pull-only":
-                node.random_val, neighbor.random_val = (
-                    neighbor.random_val,
-                    node.random_val,
-                )
+                node.random_val = neighbor.random_val
             elif mode == "push-pull":
                 node.random_val, neighbor.random_val = (
                     neighbor.random_val,
